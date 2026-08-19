@@ -1,0 +1,19 @@
+name: capstone_template
+
+profile: capstone_template
+
+seed-paths: ["seeds"]
+model-paths: ["models"]
+macro-paths: ["macros"]
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+seeds:
+  # Builds seeds into '<your_dataset_name>_raw'
+  capstone_template:
+    +dataset: raw
+
+models:
+  capstone_template:
+    +static_analysis: strict

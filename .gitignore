@@ -1,0 +1,8 @@
+target/
+dbt_packages/
+logs/
+dbt_modules/
+profiles.yml
+.DS_Store
+.vscode/
+dbt_internal_packages/
