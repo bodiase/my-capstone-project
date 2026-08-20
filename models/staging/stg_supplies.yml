@@ -1,12 +1,26 @@
 models:
   - name: stg_supplies
     description: >
-      List of our supply expenses data with basic cleaning and transformation applied.
-
-      One row per supply cost, not per supply. As supply costs fluctuate they receive a new row with a new UUID. Thus there can be multiple rows per supply_id.
+      One row per supply component as used in a specific product (i.e., one row per supply-product combination). The same physical supply (e.g. a type of cutlery) can appear in multiple products, each as its own row, since supply_uuid is a surrogate key generated from supply_id + product_id rather than supply_id alone.
     columns:
       - name: supply_uuid
         description: The unique key of our supplies per cost.
         data_tests:
           - not_null
           - unique
+      - name: supply_id
+        description: The unique key of our supplies.
+        data_tests:
+          - not_null
+      - name: product_id
+        description: The unique key of our products.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_products')
+                field: product_id
+      - name: supply_cost
+        description: The cost of the supply.
+        data_tests:
+          - not_null
