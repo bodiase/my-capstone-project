@@ -1,5 +1,5 @@
 models:
-  - name: stg_orders
+  - name: stg_ecom__orders
     description: Order data with basic cleaning and transformation applied, one row per order.
     data_tests:
       - dbt_utils.expression_is_true:

@@ -1,19 +1,26 @@
-name: capstone_template
+name: capstone_margin_analysis
 
 profile: capstone_template
 
 seed-paths: ["seeds"]
 model-paths: ["models"]
 macro-paths: ["macros"]
+test-paths: ["tests"]
 clean-targets:
   - "target"
   - "dbt_packages"
 
 seeds:
-  # Builds seeds into '<your_dataset_name>_raw'
-  capstone_template:
+  # Builds seeds into '<dataset_name>_raw'
+  capstone_margin_analysis:
     +dataset: raw
 
 models:
-  capstone_template:
+  capstone_margin_analysis:
     +static_analysis: strict
+    staging:
+      +materialized: view
+    intermediate:
+      +materialized: view
+    marts:
+      +materialized: table

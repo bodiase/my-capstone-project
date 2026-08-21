@@ -1,0 +1,46 @@
+version: 2
+
+models:
+  - name: fct_order_economics
+    description: >
+      One row per order. Primary, independently queryable fact table
+      combining order-level revenue, supply cost, estimated contribution
+      margin, and perishable-cost share with store and date context from
+      stg_orders.
+    columns:
+      - name: order_id
+        description: The unique key of this model — one row per order.
+        data_tests:
+          - not_null
+          - unique
+      - name: location_id
+        description: Foreign key to the store where this order was placed.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_ecom__locations')
+                field: location_id
+      - name: order_date
+        description: Date the order was placed.
+      - name: item_count
+        description: Number of items in the order.
+      - name: order_revenue
+        description: Total revenue for the order.
+        data_tests:
+          - not_null
+      - name: order_supply_cost
+        description: Total estimated supply cost for the order.
+        data_tests:
+          - not_null
+      - name: estimated_contribution_margin
+        description: >
+          Estimated contribution margin in dollars (order_revenue minus
+          order_supply_cost). Excludes labor, overhead, rent, and tax —
+          not GAAP profit.
+      - name: estimated_contribution_margin_pct
+        description: Estimated contribution margin as a percentage of order revenue (0–100 scale).
+      - name: perishable_supply_cost
+        description: Portion of order_supply_cost attributable to supply components flagged as perishable.
+      - name: perishable_cost_share
+        description: Percentage of order_supply_cost attributable to perishable-sourced supply components (0–100 scale).

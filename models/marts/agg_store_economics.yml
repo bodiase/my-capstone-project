@@ -1,0 +1,41 @@
+version: 2
+
+models:
+  - name: agg_store_economics
+    description: >
+      One row per store. Aggregates fct_order_economics up to store grain,
+      producing order volume and margin metrics used to compare
+      profitability across stores.
+    columns:
+      - name: location_id
+        description: The unique key of this model — one row per store.
+        data_tests:
+          - not_null
+          - unique
+          - relationships:
+              arguments:
+                to: ref('stg_ecom__locations')
+                field: location_id
+      - name: location_name
+        description: Human-readable store name.
+      - name: order_count
+        description: Number of orders placed at this store.
+        data_tests:
+          - not_null
+      - name: total_revenue
+        description: Total revenue across all orders at this store.
+        data_tests:
+          - not_null
+      - name: total_supply_cost
+        description: Total estimated supply cost across all orders at this store.
+        data_tests:
+          - not_null
+      - name: total_estimated_contribution_margin
+        description: Total estimated contribution margin (revenue minus supply cost) across all orders at this store.
+      - name: avg_margin_per_order
+        description: Average estimated contribution margin per order at this store (unweighted average across orders).
+      - name: avg_margin_pct
+        description: >
+          Store-level contribution margin percentage, calculated as total
+          estimated contribution margin divided by total revenue
+          (dollar-weighted, not an average of per-order percentages).

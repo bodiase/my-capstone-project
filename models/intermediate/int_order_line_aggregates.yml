@@ -1,0 +1,22 @@
+version: 2
+
+models:
+  - name: int_order_line_aggregates
+    description: >
+      One row per order. Aggregates int_item_costs up to order grain,
+      producing total revenue, total supply cost, total perishable-sourced
+      cost, and item count per order.
+    columns:
+      - name: order_id
+        description: The unique key of this model — one row per order.
+        data_tests:
+          - not_null
+          - unique
+      - name: order_revenue
+        description: Total revenue for the order, summed across all order items.
+        data_tests:
+          - not_null
+      - name: order_supply_cost
+        description: Total estimated supply cost for the order, summed across all order items.
+        data_tests:
+          - not_null
