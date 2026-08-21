@@ -1,131 +1,114 @@
-# Capstone Example Project
-This template repository is a **starting point** for an end-to-end analytics engineering project in dbt. A completed capstone project is required for the dbt Labs Analytics Engineering for Students learning path. This repo uses the legendary [Jaffle Shop](https://github.com/dbt-labs/jaffle-shop) project for its curated sample data, but with a smaller scope: **only seeds + staging** are included so you can design and build your own intermediate and mart layer.
-
-## What you’re building
-By the end of the capstone, you should have:
-- A specific, relevant analytics question (or small set) stated up front; perhaps opting for 1 primary, 2–4 supporting questions
-- A dbt project that runs end-to-end on **BigQuery**
-- At least one **`dim_*`** and/or **`fct_*`** model that clearly answers the stated question(s)
-- 2–4 tests (at minimum `not_null` and `unique` on primary keys, plus one business-logic test)
-- Descriptions for key models and columns so someone new can easily follow the work
-- A short write-up in the README, with at least one insight stated and supported by data evidence and at least one realistic next step that follows from the insight(s). Include sections that say `Insights: ` and `Next Steps: `.
-
+# Jaffle Shop Order Economics: Estimated Contribution Margin & Perishable Cost Analysis
+ 
+**dbt · SQL + Google BigQuery · Git/GitHub**
+ 
 ---
-
-## Prerequisites
-- BigQuery project + dataset you can write to
-- dbt (Fusion + VS Code extension) installed and working
-- Git installed and a GitHub account
-- A working BigQuery connection configured in `profiles.yml`
-
+ 
+## Overview
+ 
+This project builds a dbt pipeline on top of the Jaffle Shop sample dataset to answer a specific operational question: where is a food-service business leaking margin, and does the mix of perishable ingredients in an order help explain the difference? Raw order, product, and supply data is transformed through a staging → intermediate → marts architecture into two analysis-ready tables, validated with a layered testing strategy, and queried directly to produce the findings below.
+ 
+## Business Question
+ 
+> Which Jaffle Shop stores and products generate the strongest estimated contribution margins, and does the proportion of an order's supply cost attributable to perishable-supply-sourced components correlate with different margins?
+ 
+**Objective:** identify where the business is leaking margin — which stores and products underperform on profitability, and whether perishable-ingredient sourcing is a meaningful cost driver worth addressing through pricing, sourcing, or menu-mix decisions.
+ 
+**What this analysis actually answers:** the perishable-cost-share question is answered directly, with a strong result. The store-comparison question is supported by a fully built and tested model, but the available order data is concentrated at a single store, so no cross-store comparison is currently possible. The product-ranking question is not yet answered — the underlying data exists in `int_item_costs`, but no product-level rollup or query was produced in this pass. See **Limitations** and **Next Steps**.
+ 
 ---
-
-## Quickstart
-
-### 1) Create a repo from this template
-Follow [these instructions](https://docs.github.com/en/repositories/creating-and-managing-repositories/creating-a-repository-from-a-template#creating-a-repository-from-a-template) to create your own repo from this template.
-
-### 2) Clone that repo locally using VS Code
-Follow [these instructions](https://docs.github.com/en/pull-requests/collaborating-with-pull-requests/working-with-forks/fork-a-repo#cloning-your-forked-repository) to clone your repo for local development in VS Code.
+ 
+## Insights:
+ 
+- **Perishable cost share is strongly associated with lower margin.** Across 686 orders, `perishable_cost_share` and `estimated_contribution_margin_pct` have a correlation of **−0.77**. Orders in the bottom quartile of perishable cost share average **86.4% margin**; orders in the top quartile average **69.7%** — a 17-point gap. This is a real, sizable pattern, not noise from a handful of orders.
+- **This is an association, not an isolated causal effect.** Estimated contribution margin is mechanically derived from total supply cost, and perishable cost share is a component of that same cost. It's plausible that perishable-heavy products (e.g. jaffles) simply carry higher total supply costs for reasons beyond perishability itself, in which case product mix — not perishability specifically — may be the more direct driver. This wasn't tested directly (no product-level output was produced), so the finding is stated as a correlation, not a confirmed cause.
+- **Store comparison isn't possible with the current data.** `agg_store_economics` is fully built and tested, but all 686 orders in this dataset belong to a single store (Philadelphia). That store shows $6,818 in total revenue, $1,405.72 in total supply cost, and a 79.4% store-level contribution margin — a real number, but not comparable at this timee.
+---
+ 
+## Dataset
+ 
+Curated Jaffle Shop sample data (six raw tables: customers, orders, items, products, supplies, stores), loaded via dbt seed into BigQuery. `raw_customers` was scoped out — not relevant to a store/product margin question. Order data in this sample spans September 1–16, 2016 (686 orders).
+ 
+## Tech Stack
+ 
+| Layer | Tool |
+|---|---|
+| Transformation | dbt (Fusion engine) |
+| Warehouse | Google BigQuery |
+| Version control | Git / GitHub |
+| Testing | dbt schema tests + custom singular tests |
+ 
+## Project Architecture
+ 
 ```
-git clone <YOUR_REPO_URL>
-cd <YOUR_REPO_NAME>
+seeds (raw CSVs)
+  └── staging (stg_ecom__*)          — cleaned, typed, renamed
+        └── intermediate
+              ├── int_item_costs                — order-item grain
+              └── int_order_line_aggregates      — order grain
+                    └── marts
+                          ├── fct_order_economics    — order grain
+                          └── agg_store_economics     — store grain
 ```
-
-### 3) Confirm your dbt profile name matches `dbt_project.yml` (important)
-This project’s `dbt_project.yml` includes a `profile:` value (for example, `default`). **That value must match the profile name you have configured for BigQuery dev credentials in your `profiles.yml`.**
-
-- If your `dbt_project.yml` says `profile: default`, then your `profiles.yml` must have a top-level profile named `default:`. In this template repo, the `dbt_project.yml` says `profile: capstone_template`, so make sure you have a top-level profile named `capstone_template` in your `profiles.yml` file.
-
-Typical locations:
-- In the hidden `.dbt` folder: `~/.dbt/profiles.yml`
-- If you are using a repo-local profile (optional): `./profiles.yml`, make sure it is gitignored, otherwise your credentials will be made public!
-
-If the names do not match, dbt will fail with a “profile not found” style error.
-
-### 4) Seed the curated source data (raw layer)
-This starter uses dbt **seeds** as the “raw” tables for the project.
-
-Run: `dbt seed`
-Alternatively: `dbt build`
-
-This will create the staging models (and run any included tests, if present) alongside using the seeds as sources.
-
----
-
-## Project structure (starter scope)
-You have:
-- `seeds/`  
-  Curated CSVs that dbt loads into your warehouse (commonly into a `raw` schema or dataset).
-- `models/staging/`  
-  Staging models that clean and standardize the seeded raw tables.
-
-You do **not** have marts in this repo. You will create them based on the question you have chosen to answer.
-
-Recommended build-out:
-- `models/intermediate/` for reshaping, reusable transformations, and business logic
-- `models/marts/` for business-facing `dim_*` and `fct_*` models used to answer analytics questions
-
----
-
-## BigQuery notes (common gotchas)
-- Make sure your BigQuery credential (typically the locally saved JSON file) has permission to:
-  - create tables/views
-  - create and write to datasets
-  It is easiest to just give the service account `Owner` permissions
-- Be explicit about your target dataset (schema) in `profiles.yml` so you can easily find your outputs.
-- If you switch GCP projects or datasets, rerun `dbt debug` to confirm everything is wired correctly.
-
-Useful commands:
+ 
+### Key models
+ 
+- **`int_item_costs`** — one row per order item. Joins each item to its product's selling price and to that product's supply cost, aggregated from `raw_supplies` (a single product draws cost from multiple supply components, not one).
+- **`int_order_line_aggregates`** — one row per order. Rolls item-level economics up to order totals: revenue, supply cost, perishable-sourced cost, item count. Kept as raw sums rather than pre-computed ratios, so later aggregation stays mathematically correct.
+- **`fct_order_economics`** — one row per order. The primary, independently queryable fact table: computes estimated contribution margin, margin percentage, and perishable cost share, joined to order date and store.
+- **`agg_store_economics`** — one row per store. Aggregates order economics to store grain, using a dollar-weighted margin percentage (total margin ÷ total revenue) rather than an average of per-order percentages, since the two are not interchangeable.
+### Key metrics
+ 
+| Metric | Definition |
+|---|---|
+| Order revenue | Sum of per-unit selling prices across an order's items |
+| Order supply cost | Sum of supply component costs across an order's items |
+| Estimated contribution margin | Revenue − supply cost. **Not profit** — excludes labor, overhead, rent, and tax, which this dataset doesn't capture |
+| Estimated contribution margin % | Margin as a percentage of revenue |
+| Perishable supply cost | Portion of supply cost from components flagged perishable |
+| Perishable cost share | Perishable supply cost ÷ total supply cost |
+ 
+## Testing & Data Quality
+ 
+- Grain-defining keys (`order_item_id`, `order_id`, `location_id`) tested `unique` + `not_null`.
+- Foreign keys used in joins tested `not_null` + `relationships` against their parent table, protecting against silent `NULL`-producing join failures.
+- Two singular tests on `fct_order_economics`: a regression guard confirming the margin column matches its own defining formula, and a business invariant confirming supply cost never exceeds revenue.
+- Deliberately not tested: purely descriptive columns and values guaranteed correct by construction (e.g. an aggregate's grouping key).
+## Limitations
+ 
+- **Single-store data.** All 686 orders in this dataset belong to one of six defined stores. `agg_store_economics` is correct and ready to compare stores the moment order data spans more than one location.
+- **Narrow time window.** Order data covers only September 1–16, 2016.
+- **No product-level output.** The product half of the original question isn't answered — see Next Steps.
+- **Perishability and product mix are entangled.** The strong perishable-cost-share finding may partly reflect product category rather than perishability specifically; this wasn't isolated.
+- **Not a full profitability measure.** Estimated contribution margin excludes labor, overhead, rent, and tax by necessity of the source data.
+## Next Steps:
+ 
+- Build a lightweight product-level aggregation from `int_item_costs` to rank products by margin, closing the one part of the original question not yet answered.
+- Stratify the perishable-cost-share finding by product type to test whether the relationship holds independent of product mix.
+- Re-run the store comparison once order data spans more than one location.
+## How to Run
+ 
+```bash
+dbt seed
+dbt build
 ```
-dbt debug
-dbt parse
-dbt compile
-dbt ls
+ 
+Requires a BigQuery connection profile matching the `profile:` value in `dbt_project.yml`. See `docs/plan.md` for the full analytical plan and metric rationale.
+ 
+## Repository Structure
+ 
 ```
-
+├── models/
+│   ├── staging/
+│   ├── intermediate/
+│   └── marts/
+├── seeds/
+├── tests/
+├── docs/
+│   └── plan.md
+└── README.md
+```
+ 
 ---
-
-## Capstone requirements checklist (use this to self-review)
-- [ ] Defined primary + supporting analytics questions
-- [ ] Built at least one `dim_*` and/or `fct_*` model
-- [ ] Added schema tests for keys (unique, not_null)
-- [ ] Added at least one “business logic” test (accepted values, or custom test)
-- [ ] Added descriptions to key models and columns
-- [ ] Documented metric definitions and entity grain (especially facts)
-- [ ] Ran `dbt build` successfully with a clean output
-- [ ] README includes: At least one insight stated and supported by data evidence (numbers, comparison, trend, segment, etc.) and at least one realistic next step that follows from the insight(s)
-
----
-
-## Suggested workflow (ADLC)
-1. **Plan**
-   - Write questions, entities, grain, and expected outputs
-   - You can place these in a top-level `plan.md` file in your project
-2. **Develop**
-   - Add marts (and, optionally, intermediate) models with clear naming and layering
-3. **Test**
-   - Add tests early, document decisions
-4. **Deploy**
-   - Ensure everything builds end-to-end locally and push changes to `main`
-5. **Operate**
-   - Schedule your project to run via a job (optionally, schedule it) on dbt Platform
-6. **Observe**
-   - Check lineage and data quality signals via test results
-7. **Discover**
-   - Add any useful descriptions and documentation to the project, models, and columns.
-8. **Analyze**
-   - Query your marts (or build an output artifact) and write 1–2 insights plus next steps
-
----
-
-## How to submit
-In the learning path, you will be asked to submit:
-- A link to your GitHub repo
-
-The GitHub project README should be updated with:
-  - the question(s) you answered
-  - how to reproduce your run (what commands are needed)
-  - 1–2 insights, backed by model outputs, and next steps
-
-Bonus: You may choose to also submit links to a dashboard (can be screenshots), SQL queries in BigQuery, or a Python notebook that tells the story.
+ 
+Built as part of the dbt Analytics Engineering certification pathway.
