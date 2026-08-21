@@ -1,5 +1,5 @@
 models:
-  - name: stg_supplies
+  - name: stg_ecom__supplies
     description: >
       One row per supply component as used in a specific product (i.e., one row per supply-product combination). The same physical supply (e.g. a type of cutlery) can appear in multiple products, each as its own row, since supply_uuid is a surrogate key generated from supply_id + product_id rather than supply_id alone.
     columns:
@@ -18,7 +18,7 @@ models:
           - not_null
           - relationships:
               arguments:
-                to: ref('stg_products')
+                to: ref('stg_ecom__products')
                 field: product_id
       - name: supply_cost
         description: The cost of the supply.

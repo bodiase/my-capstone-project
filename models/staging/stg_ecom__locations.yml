@@ -1,5 +1,5 @@
 models:
-  - name: stg_locations
+  - name: stg_ecom__locations
     description: List of open locations with basic cleaning and transformation applied, one row per location.
     columns:
       - name: location_id

@@ -1,0 +1,30 @@
+version: 2
+
+models:
+  - name: int_item_costs
+    description: >
+      One row per order item, enriched with product price and aggregated
+      supply cost. Not aggregated itself — this model joins each order
+      line item to its product and product-level supply-cost summary.
+    columns:
+      - name: order_id
+        description: Foreign key to the order that this item belongs to.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_ecom__orders')
+                field: order_id
+      - name: order_item_id
+        description: The unique key of our order line items.  
+        data_tests:
+          - not_null
+          - unique
+      - name: product_id
+        description: The unique key of our products.
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('stg_ecom__products')
+                field: product_id
